@@ -52,10 +52,8 @@ MenuItem.prototype.init = function () {
     this.domNode.setAttribute('role', 'menuitem');
   }
 
-  this.domNode.addEventListener('keydown',    this.handleKeydown.bind(this));
+  
   this.domNode.addEventListener('click',      this.handleClick.bind(this));
-  this.domNode.addEventListener('focus',      this.handleFocus.bind(this));
-  this.domNode.addEventListener('blur',       this.handleBlur.bind(this));
   this.domNode.addEventListener('mouseover',  this.handleMouseover.bind(this));
   this.domNode.addEventListener('mouseout',   this.handleMouseout.bind(this));
 
@@ -157,7 +155,7 @@ MenuItem.prototype.handleKeydown = function (event) {
 MenuItem.prototype.handleClick = function (event) {
   this.menu.setFocusToController();
   this.menu.close(true);
-};
+};  
 
 MenuItem.prototype.handleFocus = function (event) {
   this.menu.hasFocus = true;

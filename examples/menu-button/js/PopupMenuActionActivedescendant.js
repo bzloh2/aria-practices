@@ -56,6 +56,8 @@ var PopupMenuActionActivedescendant = function (domNode, controllerObj) {
     childElement = childElement.nextElementSibling;
   }
 
+  this.currentMenuItem;
+
   this.domNode = domNode;
   this.controller = controllerObj;
 
@@ -105,9 +107,11 @@ PopupMenuActionActivedescendant.prototype.init = function () {
     label = this.controller.domNode.innerHTML;
     this.domNode.setAttribute('aria-label', label);
   }
-
+  this.domNode.addEventListener('keydown',    this.handleKeydown.bind(this));
   this.domNode.addEventListener('mouseover', this.handleMouseover.bind(this));
   this.domNode.addEventListener('mouseout',  this.handleMouseout.bind(this));
+  this.domNode.addEventListener('focus', this.handleFocus.bind(this));
+  this.domNode.addEventListener('blur', this.handleBlur.bind(this));
 
   // Traverse the element children of domNode: configure each with
   // menuitem role behavior and store reference in menuitems array.
@@ -116,7 +120,7 @@ PopupMenuActionActivedescendant.prototype.init = function () {
   for (var i = 0; i < menuElements.length; i++) {
 
     menuElement = menuElements[i];
-
+    this.menuItems.push(menuElement);
     if (!menuElement.firstElementChild && menuElement.getAttribute('role') != 'separator') {
       menuItem = new MenuItem(menuElement, this);
       menuItem.init();
@@ -133,6 +137,87 @@ PopupMenuActionActivedescendant.prototype.init = function () {
     this.lastItem  = this.menuitems[numItems - 1];
   }
 };
+PopupMenuActionActivedescendant.prototype.handleKeydown = function (event) {
+  var flag = false;
+  switch (event.keyCode) {
+  case this.keyCode.SPACE:
+  case this.keyCode.RETURN:
+    // Create simulated mouse event to mimic the behavior of ATs
+    // and let the event handler handleClick do the housekeeping.
+    try {
+      clickEvent = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+      });
+    }
+    catch (err) {
+      if (document.createEvent) {
+        // DOM Level 3 for IE 9+
+        clickEvent = document.createEvent('MouseEvents');
+        clickEvent.initEvent('click', true, true);
+      }
+    }
+    this.currentMenuItem.domNode.dispatchEvent(clickEvent);
+    flag = true;
+    break;
+
+  case this.keyCode.ESC:
+    this.close(true);
+    flag = true;
+    break;
+
+  case this.keyCode.UP:
+    this.setFocusToPreviousItem(this);
+    flag = true;
+    break;
+
+  case this.keyCode.DOWN:
+    this.setFocusToNextItem(this);
+    flag = true;
+    break;
+
+  case this.keyCode.LEFT:
+    this.setFocusToPreviousItem(this);
+    this.close(true);
+    flag = true;
+    break;
+
+  case this.keyCode.RIGHT:
+    this.setFocusToNextItem(this);
+    this.close(true);
+    flag = true;
+    break;
+
+  case this.keyCode.HOME:
+  case this.keyCode.PAGEUP:
+    this.setFocusToFirstItem();
+    flag = true;
+    break;
+
+  case this.keyCode.END:
+  case this.keyCode.PAGEDOWN:
+    this.setFocusToLastItem();
+    flag = true;
+    break;
+
+  case this.keyCode.TAB:
+    this.setFocusToController();
+    this.close(true);
+    break;
+
+  default:
+    if (isPrintableCharacter(char)) {
+      this.setFocusByFirstCharacter(this, char);
+    }
+    break;
+  }
+
+  if (flag) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+};
 
 /* EVENT HANDLERS */
 
@@ -146,42 +231,34 @@ PopupMenuActionActivedescendant.prototype.handleMouseout = function (event) {
 };
 
 /* FOCUS MANAGEMENT METHODS */
-
-PopupMenuActionActivedescendant.prototype.setFocusToController = function (command) {
-  if (typeof command !== 'string') {
-    command = '';
+PopupMenuActionActivedescendant.prototype.setFocus = function (currentItem) {
+  for (var i = 0; i < this.menuItems.length; i++) {
+    var mi = this.menuItems[i];
+    this.domNode.classList.remove('focus');
   }
 
-  if (command === 'previous') {
-    this.controller.menubutton.setFocusToPreviousItem(this.controller);
-  }
-  else {
-    if (command === 'next') {
-      this.controller.menubutton.setFocusToNextItem(this.controller);
-    }
-    else {
-      this.controller.domNode.focus();
-    }
-  }
+  currentItem.domNode.classList.add('focus');
+  this.domNode.setAttribute('aria-activedescendant', currentItem.domNode.id);
+  this.currentMenuItem = currentItem;
 };
 
 PopupMenuActionActivedescendant.prototype.setFocusToFirstItem = function () {
-  this.firstItem.domNode.focus();
+  this.setFocus(this.firstItem);
 };
 
 PopupMenuActionActivedescendant.prototype.setFocusToLastItem = function () {
-  this.lastItem.domNode.focus();
+  this.setFocus(this.lastItem);
 };
 
 PopupMenuActionActivedescendant.prototype.setFocusToPreviousItem = function (currentItem) {
   var index;
 
   if (currentItem === this.firstItem) {
-    this.lastItem.domNode.focus();
+    this.setFocusToLastItem();
   }
   else {
     index = this.menuitems.indexOf(currentItem);
-    this.menuitems[index - 1].domNode.focus();
+    this.setFocus(this.menuItems[index - 1]);
   }
 };
 
@@ -189,11 +266,11 @@ PopupMenuActionActivedescendant.prototype.setFocusToNextItem = function (current
   var index;
 
   if (currentItem === this.lastItem) {
-    this.firstItem.domNode.focus();
+    this.setFocusToFirstItem();
   }
   else {
     index = this.menuitems.indexOf(currentItem);
-    this.menuitems[index + 1].domNode.focus();
+    this.setFocus(this.menuItems[index + 1]);
   }
 };
 
