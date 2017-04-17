@@ -56,7 +56,7 @@ var PopupMenuActionActivedescendant = function (domNode, controllerObj) {
     childElement = childElement.nextElementSibling;
   }
 
-  this.currentMenuItem;
+  this.currentItem;
 
   this.domNode = domNode;
   this.controller = controllerObj;
@@ -96,7 +96,7 @@ var PopupMenuActionActivedescendant = function (domNode, controllerObj) {
 *       array. Initialize firstItem and lastItem properties.
 */
 PopupMenuActionActivedescendant.prototype.init = function () {
-  var childElement, menuElement, firstChildElement, menuItem, textContent, numItems, label;
+  var childElement, menuElement, firstChildElement, menuItem, textContent, label;
 
   // Configure the domNode itself
   this.domNode.tabIndex = 0;
@@ -110,7 +110,6 @@ PopupMenuActionActivedescendant.prototype.init = function () {
   this.domNode.addEventListener('keydown',    this.handleKeydown.bind(this));
   this.domNode.addEventListener('mouseover', this.handleMouseover.bind(this));
   this.domNode.addEventListener('mouseout',  this.handleMouseout.bind(this));
-  this.domNode.addEventListener('focus', this.handleFocus.bind(this));
   this.domNode.addEventListener('blur', this.handleBlur.bind(this));
 
   // Traverse the element children of domNode: configure each with
@@ -120,22 +119,21 @@ PopupMenuActionActivedescendant.prototype.init = function () {
   for (var i = 0; i < menuElements.length; i++) {
 
     menuElement = menuElements[i];
-    this.menuItems.push(menuElement);
     if (!menuElement.firstElementChild && menuElement.getAttribute('role') != 'separator') {
       menuItem = new MenuItem(menuElement, this);
       menuItem.init();
       this.menuitems.push(menuItem);
       textContent = menuElement.textContent.trim();
-      this.firstChars.push(textContent.substring(0, 1).toLowerCase());
     }
   }
 
   // Use populated menuitems array to initialize firstItem and lastItem.
-  numItems = this.menuitems.length;
-  if (numItems > 0) {
+  if (this.menuitems.length > 0) {
     this.firstItem = this.menuitems[0];
-    this.lastItem  = this.menuitems[numItems - 1];
+    this.currentItem = this.firstItem;
+    this.lastItem  = this.menuitems[this.menuitems.length - 1];
   }
+
 };
 PopupMenuActionActivedescendant.prototype.handleKeydown = function (event) {
   var flag = false;
@@ -158,33 +156,34 @@ PopupMenuActionActivedescendant.prototype.handleKeydown = function (event) {
         clickEvent.initEvent('click', true, true);
       }
     }
-    this.currentMenuItem.domNode.dispatchEvent(clickEvent);
+    this.currentItem.domNode.dispatchEvent(clickEvent);
     flag = true;
     break;
 
   case this.keyCode.ESC:
     this.close(true);
+    this.setFocusToController();
     flag = true;
     break;
 
   case this.keyCode.UP:
-    this.setFocusToPreviousItem(this);
+    this.setFocusToPreviousItem();
     flag = true;
     break;
 
   case this.keyCode.DOWN:
-    this.setFocusToNextItem(this);
+    this.setFocusToNextItem();
     flag = true;
     break;
 
   case this.keyCode.LEFT:
-    this.setFocusToPreviousItem(this);
+    this.setFocusToPreviousItem();
     this.close(true);
     flag = true;
     break;
 
   case this.keyCode.RIGHT:
-    this.setFocusToNextItem(this);
+    this.setFocusToNextItem();
     this.close(true);
     flag = true;
     break;
@@ -203,15 +202,14 @@ PopupMenuActionActivedescendant.prototype.handleKeydown = function (event) {
 
   case this.keyCode.TAB:
     this.setFocusToController();
+    this.hasFocus = false;
     this.close(true);
     break;
 
   default:
-    if (isPrintableCharacter(char)) {
-      this.setFocusByFirstCharacter(this, char);
-    }
+
     break;
-  }
+}
 
   if (flag) {
     event.stopPropagation();
@@ -220,6 +218,9 @@ PopupMenuActionActivedescendant.prototype.handleKeydown = function (event) {
 };
 
 /* EVENT HANDLERS */
+PopupMenuActionActivedescendant.prototype.handleBlur = function (event) {
+  this.close();
+};
 
 PopupMenuActionActivedescendant.prototype.handleMouseover = function (event) {
   this.hasHover = true;
@@ -231,15 +232,14 @@ PopupMenuActionActivedescendant.prototype.handleMouseout = function (event) {
 };
 
 /* FOCUS MANAGEMENT METHODS */
-PopupMenuActionActivedescendant.prototype.setFocus = function (currentItem) {
-  for (var i = 0; i < this.menuItems.length; i++) {
-    var mi = this.menuItems[i];
-    this.domNode.classList.remove('focus');
+PopupMenuActionActivedescendant.prototype.setFocus = function (item) {
+  for (var i = 0; i < this.menuitems.length; i++) {
+    var mi = this.menuitems[i];
+    mi.domNode.classList.remove('focus');
   }
-
-  currentItem.domNode.classList.add('focus');
-  this.domNode.setAttribute('aria-activedescendant', currentItem.domNode.id);
-  this.currentMenuItem = currentItem;
+  item.domNode.classList.add('focus');
+  this.domNode.setAttribute('aria-activedescendant', item.domNode.id);
+  this.currentItem = item;
 };
 
 PopupMenuActionActivedescendant.prototype.setFocusToFirstItem = function () {
@@ -250,60 +250,44 @@ PopupMenuActionActivedescendant.prototype.setFocusToLastItem = function () {
   this.setFocus(this.lastItem);
 };
 
-PopupMenuActionActivedescendant.prototype.setFocusToPreviousItem = function (currentItem) {
+PopupMenuActionActivedescendant.prototype.setFocusToPreviousItem = function () {
   var index;
 
-  if (currentItem === this.firstItem) {
+  if (this.currentItem === this.firstItem) {
     this.setFocusToLastItem();
   }
   else {
-    index = this.menuitems.indexOf(currentItem);
-    this.setFocus(this.menuItems[index - 1]);
+    index = this.menuitems.indexOf(this.currentItem);
+    this.setFocus(this.menuitems[index - 1]);
   }
 };
 
-PopupMenuActionActivedescendant.prototype.setFocusToNextItem = function (currentItem) {
+PopupMenuActionActivedescendant.prototype.setFocusToNextItem = function () {
   var index;
 
-  if (currentItem === this.lastItem) {
+  if (this.currentItem === this.lastItem) {
     this.setFocusToFirstItem();
   }
   else {
-    index = this.menuitems.indexOf(currentItem);
-    this.setFocus(this.menuItems[index + 1]);
+    index = this.menuitems.indexOf(this.currentItem);
+    this.setFocus(this.menuitems[index + 1]);
   }
 };
 
-PopupMenuActionActivedescendant.prototype.setFocusByFirstCharacter = function (currentItem, char) {
-  var start, index, char = char.toLowerCase();
-
-  // Get start index for search based on position of currentItem
-  start = this.menuitems.indexOf(currentItem) + 1;
-  if (start === this.menuitems.length) {
-    start = 0;
+PopupMenuActionActivedescendant.prototype.getCurrentItem = function () {
+  var id = this.domNode.getAttribute('aria-activedescendant');
+  if (!id) {
+    this.domNode.setAttribute('aria-activedescendant', this.firstItem.domNode.id);
+    return this.firstItem;
   }
-
-  // Check remaining slots in the menu
-  index = this.getIndexFirstChars(start, char);
-
-  // If not found in remaining slots, check from beginning
-  if (index === -1) {
-    index = this.getIndexFirstChars(0, char);
-  }
-
-  // If match was found...
-  if (index > -1) {
-    this.menuitems[index].domNode.focus();
-  }
-};
-
-PopupMenuActionActivedescendant.prototype.getIndexFirstChars = function (startIndex, char) {
-  for (var i = startIndex; i < this.firstChars.length; i++) {
-    if (char === this.firstChars[i]) {
-      return i;
+  for (var i = 0; i < this.menuitems.length; i++) {
+    var mi = this.menuitems[i];
+    if (mi.domNode.id == id) {
+      return mi;
     }
   }
-  return -1;
+  this.domNode.setAttribute('aria-activedescendant', this.firstItem.domNode.id);
+  return this.firstItem;
 };
 
 /* MENU DISPLAY METHODS */
@@ -318,6 +302,9 @@ PopupMenuActionActivedescendant.prototype.open = function () {
   this.domNode.style.top  = rect.height + 'px';
   this.domNode.style.left = '0px';
 
+  this.hasFocus = true;
+  this.domNode.focus();
+
   // set aria-expanded attribute
   this.controller.domNode.setAttribute('aria-expanded', 'true');
 };
@@ -328,8 +315,12 @@ PopupMenuActionActivedescendant.prototype.close = function (force) {
     force = false;
   }
 
-  if (force || (!this.hasFocus && !this.hasHover && !this.controller.hasHover)) {
+  if (force || (this.hasFocus && !this.hasHover && !this.controller.hasHover)) {
     this.domNode.style.display = 'none';
     this.controller.domNode.setAttribute('aria-expanded', 'false');
   }
+};
+
+PopupMenuActionActivedescendant.prototype.setFocusToController = function () {
+  this.controller.domNode.focus();
 };
