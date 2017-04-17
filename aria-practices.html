@@ -214,7 +214,7 @@
       </section>
       <section class="notoc">
         <h4>Example</h4>
-        <p><a href="examples/accordion/accordion.html">Accordion Example</a>: demonstrates a form divided into three sections using an accordion to show one ssection at a time. </p>
+        <p><a href="examples/accordion/accordion.html">Accordion Example</a>: demonstrates a form divided into three sections using an accordion to show one section at a time. </p>
       </section>
     </section>
 
@@ -530,15 +530,16 @@
               <li>In all circumstances, focus moves to an element contained in the dialog.</li>
               <li>Unless a condition where doing otherwise is advisable, focus is initially set on the first focusable element.</li>
               <li>
-                If the content is large enough that focusing the first interactive element could cause the beginning of content to scroll out of view, 
-                it is advisable to add <code>tabindex=<q>0</q></code> to a static element at the top of the dialog, such as the dialog title or first paragraph, and initially focus that element.
+                If content is large enough that focusing the first interactive element could cause the beginning of content to scroll out of view, 
+                it is advisable to add <code>tabindex=<q>-1</q></code> to a static element at the top of the dialog, such as the dialog title or first paragraph, and initially focus that element.
               </li>
               <li>
-                If the dialog is asking the user to confirm a destructive action, it may be advisable to set focus on the least destructive action, especially if undoing the action is difficult or impossible.
+                If a dialog contains the final step in a process that is not easily reversible, such as deleting data or completing a financial transaction, 
+                it may be advisable to set focus on the least destructive action, especially if undoing the action is difficult or impossible.
                 The <a href="#alertdialog">Alert Dialog Pattern</a> is often employed in such circumstances.
               </li>
               <li>
-                If the dialog is limited to interactions that either provide additional information or continue processing,
+                If a dialog is limited to interactions that either provide additional information or continue processing,
                 it might set focus to the element deemed to be most frequently desired, such as a <q>OK</q> or <q>Continue</q> button.
               </li>
             </ul>
@@ -554,6 +555,7 @@
         <h4>WAI-ARIA Roles, States, and Properties</h4>
         <ul>
           <li>The element that serves as the dialog container has a role of <a href="#dialog" class="role-reference">dialog</a>.</li>
+          <li>The dialog container element has <a href="#aria-modal" class="property-reference">aria-modal</a> set to <code>true</code>.</li>
           <li>The dialog has either:
             <ul>
               <li>The <a href="#aria-labelledby" class="property-reference">aria-labelledby</a> property set to refer to the visible dialog title.</li>
@@ -565,6 +567,13 @@
             element with the <code>dialog</code> role to indicate which
             element or elements in the dialog contain content that describes the primary purpose or message of the dialog.
             Specifying descriptive elements enables screen readers to announce the description along with the dialog title and initially focused element when the dialog opens.
+          </li>
+          <li>
+            With the addition of <a href="#aria-modal" class="property-reference">aria-modal</a> set to true, where content outside the dialog is completely inert 
+            and visually obscured to an extent that is intentionally unreadable, it is no longer necessary to set <a href="#aria-hidden" class="state-reference">aria-hidden</a>
+            to <code>true</code> on each element containing a portion of the inert layer,    
+            If you do still use <code>aria-hidden</code> set to <code>true</code> the dialog container element cannot be a descendant 
+            of an element that has <code>aria-hidden</code> set to <code>true</code> and the content outside the modal dialog must not be visually discernable.
           </li>
         </ul>
       </section>
@@ -1340,8 +1349,8 @@ For additional guidance, see <a href="#kbd_selection_follows_focus">Deciding Whe
           </li>
           <li><kbd>Space</kbd>:
             <ul>
-              <li>When focus is on a <code>menuitemcheckbox</code>, changes the state without closing the menu.</li>
-              <li>When focus is on a <code>menuitemradio</code> that is not checked, without closing the menu, checks the focused <code>menuitemradio</code> and unchecks any other checked <code>menuitemradio</code> element in the same group.</li>
+              <li>(Optional): When focus is on a <code>menuitemcheckbox</code>, changes the state without closing the menu.</li>
+              <li>(Optional): When focus is on a <code>menuitemradio</code> that is not checked, without closing the menu, checks the focused <code>menuitemradio</code> and unchecks any other checked <code>menuitemradio</code> element in the same group.</li>
               <li>(Optional): When focus is on a <code>menuitem</code> that has a submenu, opens the submenu and places focus on its first item.</li>
               <li>(Optional): When focus is on a <code>menuitem</code> that does not have a submenu, activates the <code>menuitem</code> and closes the menu.</li>
             </ul>
@@ -1355,7 +1364,7 @@ For additional guidance, see <a href="#kbd_selection_follows_focus">Deciding Whe
           <li><kbd>Up Arrow</kbd>:
             <ul>
             <li>When focus is in a <code>menu</code>, moves focus to the previous item, optionally wrapping from the first to the last.</li>
-            <li>When focus is in a <code>menubar</code>, does nothing.</li>
+            <li>(Optional): When focus is on a <code>menuitem</code> in a <code>menubar</code>, opens its submenu and places focus on the last item in the submenu.</li>
             </ul>
           </li>
           <li><kbd>Right Arrow</kbd>:
